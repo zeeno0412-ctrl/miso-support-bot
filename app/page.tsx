@@ -10,11 +10,18 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { label: '🐛 버그 접수', text: '버그를 신고하고 싶어요' },
-  { label: '✨ UX 개선 요청', text: 'UX 개선 요청을 하고 싶어요' },
-  { label: '➕ 기능 추가 요청', text: '기능 추가 요청을 하고 싶어요' },
-  { label: '📖 사용법 안내', text: 'MISO 사용법을 알려주세요' },
-  { label: '🖼️ 이미지 생성', text: '이미지 생성 기능은 어떻게 쓰나요?' },
+  { label: '🐛 버그 접수', text: '버그를 신고하고 싶어요', disabled: false },
+  { label: '✨ UX 개선 요청', text: 'UX 개선 요청을 하고 싶어요', disabled: false },
+  { label: '➕ 기능 추가 요청', text: '기능 추가 요청을 하고 싶어요', disabled: false },
+  { label: '📖 사용법 안내', text: '', disabled: true },
+]
+
+const SCREEN_OPTIONS = ['에이전트', '위젯', '앱리스트', '워크플로우', '챗플로우', '기타']
+
+const ENV_GROUPS = [
+  { key: 'net', options: ['사내망', '외부망'] },
+  { key: 'device', options: ['맥북', '윈도우'] },
+  { key: 'browser', options: ['크롬', '엣지', '기타'] },
 ]
 
 export default function Home() {
@@ -26,6 +33,7 @@ export default function Home() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [envSelections, setEnvSelections] = useState<Record<string, string>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -69,19 +77,44 @@ export default function Home() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       sendMessage()
     }
   }
 
   const formatMessage = (text: string) => {
-    // 코드블록 제거 후 마크다운 간단 파싱
     return text
       .replace(/```json[\s\S]*?```/g, '')
+      .replace(/NEEDS_SCREEN_BUTTONS/g, '')
+      .replace(/NEEDS_ENV_BUTTONS/g, '')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br/>')
       .trim()
+  }
+
+  const lastAssistantContent = [...messages].reverse().find(m => m.role === 'assistant')?.content ?? ''
+  const showScreenButtons = !loading && lastAssistantContent.includes('NEEDS_SCREEN_BUTTONS')
+  const showEnvButtons = !loading && lastAssistantContent.includes('NEEDS_ENV_BUTTONS')
+  const showConfirmButtons = !loading && lastAssistantContent.includes('"확인"이라고 답해주세요')
+
+  const chipStyle: React.CSSProperties = {
+    padding: '8px 14px',
+    borderRadius: 20,
+    border: '1px solid var(--border)',
+    background: 'var(--surface2)',
+    color: 'var(--text-secondary)',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  }
+
+  const handleEnvConfirm = () => {
+    const allSelected = ENV_GROUPS.every(g => envSelections[g.key])
+    if (!allSelected) return
+    const combined = ENV_GROUPS.map(g => envSelections[g.key]).join(' / ')
+    sendMessage(`환경 정보: ${combined}`)
+    setEnvSelections({})
   }
 
   const isFirstMessage = messages.length === 1
@@ -154,7 +187,7 @@ export default function Home() {
               border: msg.role === 'assistant' ? '1px solid var(--border)' : 'none',
               fontSize: '14px',
               lineHeight: '1.6',
-              color: 'var(--text-primary)',
+              color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
             }}
               dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }}
             />
@@ -163,8 +196,8 @@ export default function Home() {
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 14px',
                 borderRadius: 8,
-                background: 'rgba(52, 211, 153, 0.1)',
-                border: '1px solid rgba(52, 211, 153, 0.3)',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
                 fontSize: '13px',
                 color: 'var(--success)',
               }}>
@@ -180,17 +213,28 @@ export default function Home() {
             {QUICK_ACTIONS.map(action => (
               <button
                 key={action.label}
-                onClick={() => sendMessage(action.text)}
+                onClick={() => !action.disabled && sendMessage(action.text)}
+                disabled={action.disabled}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: 20,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface2)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
+                  ...chipStyle,
+                  cursor: action.disabled ? 'not-allowed' : 'pointer',
+                  opacity: action.disabled ? 0.4 : 1,
                 }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Screen selection buttons */}
+        {showScreenButtons && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 4 }}>
+            {SCREEN_OPTIONS.map(opt => (
+              <button
+                key={opt}
+                onClick={() => sendMessage(opt)}
+                style={chipStyle}
                 onMouseEnter={e => {
                   (e.target as HTMLElement).style.borderColor = 'var(--accent)'
                   ;(e.target as HTMLElement).style.color = 'var(--accent)'
@@ -200,9 +244,81 @@ export default function Home() {
                   ;(e.target as HTMLElement).style.color = 'var(--text-secondary)'
                 }}
               >
-                {action.label}
+                {opt}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Env selection buttons */}
+        {showEnvButtons && (
+          <div style={{ paddingLeft: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {ENV_GROUPS.map(group => (
+              <div key={group.key} style={{ display: 'flex', gap: 8 }}>
+                {group.options.map(opt => {
+                  const selected = envSelections[group.key] === opt
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => setEnvSelections(prev => ({ ...prev, [group.key]: opt }))}
+                      style={{
+                        ...chipStyle,
+                        borderColor: selected ? 'var(--accent)' : 'var(--border)',
+                        color: selected ? 'var(--accent)' : 'var(--text-secondary)',
+                        background: selected ? 'var(--accent-subtle)' : 'var(--surface2)',
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+            <button
+              onClick={handleEnvConfirm}
+              disabled={!ENV_GROUPS.every(g => envSelections[g.key])}
+              style={{
+                ...chipStyle,
+                alignSelf: 'flex-start',
+                background: ENV_GROUPS.every(g => envSelections[g.key]) ? 'var(--accent)' : 'var(--surface2)',
+                color: ENV_GROUPS.every(g => envSelections[g.key]) ? '#fff' : 'var(--text-muted)',
+                border: 'none',
+                cursor: ENV_GROUPS.every(g => envSelections[g.key]) ? 'pointer' : 'not-allowed',
+              }}
+            >
+              선택 완료
+            </button>
+          </div>
+        )}
+
+        {/* Confirm / edit buttons */}
+        {showConfirmButtons && (
+          <div style={{ display: 'flex', gap: 8, paddingLeft: 4 }}>
+            <button
+              onClick={() => sendMessage('확인')}
+              style={{
+                ...chipStyle,
+                background: 'var(--accent)',
+                color: '#fff',
+                border: 'none',
+              }}
+            >
+              ✅ 확인
+            </button>
+            <button
+              onClick={() => sendMessage('수정할게요')}
+              style={chipStyle}
+              onMouseEnter={e => {
+                (e.target as HTMLElement).style.borderColor = 'var(--accent)'
+                ;(e.target as HTMLElement).style.color = 'var(--accent)'
+              }}
+              onMouseLeave={e => {
+                (e.target as HTMLElement).style.borderColor = 'var(--border)'
+                ;(e.target as HTMLElement).style.color = 'var(--text-secondary)'
+              }}
+            >
+              ✏️ 수정할게요
+            </button>
           </div>
         )}
 
