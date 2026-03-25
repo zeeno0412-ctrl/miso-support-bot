@@ -16,6 +16,7 @@ const QUICK_ACTIONS = [
   { label: '📖 사용법 안내', text: '', disabled: true },
 ]
 
+const COMPANY_OPTIONS = ['GS리테일', 'GS E&R', 'GS칼텍스', '기타']
 const SCREEN_OPTIONS = ['에이전트', '위젯', '앱리스트', '워크플로우', '챗플로우', '기타']
 
 const ENV_GROUPS = [
@@ -86,6 +87,7 @@ export default function Home() {
   const formatMessage = (text: string) => {
     return text
       .replace(/```json[\s\S]*?```/g, '')
+      .replace(/NEEDS_COMPANY_BUTTONS/g, '')
       .replace(/NEEDS_SCREEN_BUTTONS/g, '')
       .replace(/NEEDS_ENV_BUTTONS/g, '')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -94,6 +96,7 @@ export default function Home() {
   }
 
   const lastAssistantContent = [...messages].reverse().find(m => m.role === 'assistant')?.content ?? ''
+  const showCompanyButtons = !loading && lastAssistantContent.includes('NEEDS_COMPANY_BUTTONS')
   const showScreenButtons = !loading && lastAssistantContent.includes('NEEDS_SCREEN_BUTTONS')
   const showEnvButtons = !loading && lastAssistantContent.includes('NEEDS_ENV_BUTTONS')
   const showConfirmButtons = !loading && lastAssistantContent.includes('"확인"이라고 답해주세요')
@@ -222,6 +225,29 @@ export default function Home() {
                 }}
               >
                 {action.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Company selection buttons */}
+        {showCompanyButtons && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 4 }}>
+            {COMPANY_OPTIONS.map(opt => (
+              <button
+                key={opt}
+                onClick={() => sendMessage(opt)}
+                style={chipStyle}
+                onMouseEnter={e => {
+                  (e.target as HTMLElement).style.borderColor = 'var(--accent)'
+                  ;(e.target as HTMLElement).style.color = 'var(--accent)'
+                }}
+                onMouseLeave={e => {
+                  (e.target as HTMLElement).style.borderColor = 'var(--border)'
+                  ;(e.target as HTMLElement).style.color = 'var(--text-secondary)'
+                }}
+              >
+                {opt}
               </button>
             ))}
           </div>
