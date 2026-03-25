@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
             message: text,
             submitted: true,
             issueNumber: parsed.data.접수번호,
+            title: parsed.data.제목,
+            type: parsed.data.유형,
           })
         }
       } catch (e) {
