@@ -30,7 +30,7 @@ const QUICK_ACTIONS = [
 ]
 
 const COMPANY_OPTIONS = ['GS리테일', 'GS E&R', 'GS칼텍스', '기타']
-const SCREEN_OPTIONS = ['에이전트', '위젯', '앱리스트', '워크플로우', '챗플로우', '기타']
+const SCREEN_OPTIONS = ['미소 AI', '에이전트', '워크플로우', '지식관리', '도구 모음', '기타']
 
 const ENV_GROUPS = [
   { key: 'net', options: ['사내망', '외부망'] },
