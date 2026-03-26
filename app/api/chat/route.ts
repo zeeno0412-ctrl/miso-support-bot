@@ -35,11 +35,18 @@ export async function POST(req: NextRequest) {
         const parsed = JSON.parse(jsonMatch[1])
         if (parsed.action === 'submit_issue') {
           try {
-            const issueData = {
-              ...parsed.data,
-              게열사: parsed.data.게열사 || parsed.data.계열사 || '',
+            const issueData: IssueData = {
+              접수번호: parsed.data.접수번호 || '',
+              유형: parsed.data.유형,
+              계열사: parsed.data.계열사 || parsed.data.게열사 || '',
+              화면: parsed.data.화면 || '',
+              제목: parsed.data.제목 || '',
+              제보자: parsed.data.제보자 || '',
+              상세내용: parsed.data.상세내용 || parsed.data['상세 내용'] || '',
+              재현경로: parsed.data.재현경로 || parsed.data['재현 경로'] || '',
+              환경정보: parsed.data.환경정보 || '',
             }
-            await createIssue(issueData as IssueData)
+            await createIssue(issueData)
           } catch (notionErr) {
             console.error('Notion save error:', notionErr)
           }
