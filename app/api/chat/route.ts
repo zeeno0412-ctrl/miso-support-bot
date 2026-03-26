@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
         const parsed = JSON.parse(jsonMatch[1])
         if (parsed.action === 'submit_issue') {
           try {
-            await createIssue(parsed.data as IssueData)
+            const issueData = {
+              ...parsed.data,
+              게열사: parsed.data.게열사 || parsed.data.계열사 || '',
+            }
+            await createIssue(issueData as IssueData)
           } catch (notionErr) {
             console.error('Notion save error:', notionErr)
           }
