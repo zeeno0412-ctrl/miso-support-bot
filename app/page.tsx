@@ -145,6 +145,7 @@ export default function Home() {
   const showScreenButtons = !loading && !activeIssue && lastAssistantContent.includes('NEEDS_SCREEN_BUTTONS')
   const showEnvButtons = !loading && !activeIssue && lastAssistantContent.includes('NEEDS_ENV_BUTTONS')
   const showConfirmButtons = !loading && !activeIssue && lastAssistantContent.includes('"확인"이라고 답해주세요')
+  const inputDisabled = showCompanyButtons || showScreenButtons || showEnvButtons || showConfirmButtons
 
   const chipStyle: React.CSSProperties = {
     padding: '8px 14px',
@@ -453,19 +454,23 @@ export default function Home() {
                 <textarea
                   ref={inputRef}
                   value={input}
-                  onChange={e => setInput(e.target.value)}
+                  onChange={e => !inputDisabled && setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="메시지를 입력하세요... (Shift+Enter: 줄바꿈)"
+                  placeholder={inputDisabled ? '위 버튼에서 선택해주세요' : '메시지를 입력하세요... (Shift+Enter: 줄바꿈)'}
                   rows={1}
+                  disabled={inputDisabled}
                   style={{
                     flex: 1, padding: '12px 16px', borderRadius: 12,
-                    border: '1px solid var(--border)', background: 'var(--surface2)',
-                    color: 'var(--text-primary)', fontSize: '14px',
+                    border: '1px solid var(--border)',
+                    background: inputDisabled ? 'var(--surface)' : 'var(--surface2)',
+                    color: inputDisabled ? 'var(--text-muted)' : 'var(--text-primary)',
+                    fontSize: '14px',
                     resize: 'none', outline: 'none', fontFamily: 'inherit',
                     lineHeight: '1.5', maxHeight: 120, overflowY: 'auto',
                     transition: 'border-color 0.15s',
+                    cursor: inputDisabled ? 'not-allowed' : 'text',
                   }}
-                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onFocus={e => { if (!inputDisabled) e.target.style.borderColor = 'var(--accent)' }}
                   onBlur={e => (e.target.style.borderColor = 'var(--border)')}
                   onInput={e => {
                     const t = e.target as HTMLTextAreaElement
@@ -473,12 +478,12 @@ export default function Home() {
                     t.style.height = Math.min(t.scrollHeight, 120) + 'px'
                   }}
                 />
-                <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
+                <button onClick={() => sendMessage()} disabled={!input.trim() || loading || inputDisabled}
                   style={{
                     width: 44, height: 44, borderRadius: 12, border: 'none',
-                    background: input.trim() && !loading ? 'var(--accent)' : 'var(--surface2)',
-                    color: input.trim() && !loading ? '#fff' : 'var(--text-muted)',
-                    fontSize: '18px', cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+                    background: input.trim() && !loading && !inputDisabled ? 'var(--accent)' : 'var(--surface2)',
+                    color: input.trim() && !loading && !inputDisabled ? '#fff' : 'var(--text-muted)',
+                    fontSize: '18px', cursor: input.trim() && !loading && !inputDisabled ? 'pointer' : 'not-allowed',
                     transition: 'all 0.15s', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
