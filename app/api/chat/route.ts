@@ -11,10 +11,13 @@ export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json()
 
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const systemPrompt = SYSTEM_PROMPT + `\n\n오늘 날짜는 ${today}입니다. 접수번호 생성 시 반드시 이 날짜를 사용하세요. (예: MISO-${today}-042)`
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages,
     })
 
@@ -31,7 +34,11 @@ export async function POST(req: NextRequest) {
       try {
         const parsed = JSON.parse(jsonMatch[1])
         if (parsed.action === 'submit_issue') {
-          await createIssue(parsed.data as IssueData)
+          try {
+            await createIssue(parsed.data as IssueData)
+          } catch (notionErr) {
+            console.error('Notion save error:', notionErr)
+          }
           return NextResponse.json({
             message: text,
             submitted: true,
