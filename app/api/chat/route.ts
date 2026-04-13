@@ -15,8 +15,13 @@ export async function POST(req: NextRequest) {
     // MISO 사용법 매뉴얼 모드
     if (mode === 'manual') {
       const lastMsg = messages[messages.length - 1]?.content ?? ''
-      const result = await callMisoManual(lastMsg, misoConvId ?? '', 'miso-support-bot')
-      return NextResponse.json({ message: result.answer, misoConvId: result.conversationId, submitted: false })
+      try {
+        const result = await callMisoManual(lastMsg, misoConvId ?? '', 'miso-support-bot')
+        return NextResponse.json({ message: result.answer, misoConvId: result.conversationId, submitted: false })
+      } catch (manualErr: any) {
+        console.error('MISO Manual API error:', manualErr?.message)
+        return NextResponse.json({ error: `MISO 매뉴얼 연결 실패: ${manualErr?.message ?? '알 수 없는 오류'}` }, { status: 502 })
+      }
     }
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
