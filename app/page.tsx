@@ -26,7 +26,7 @@ const QUICK_ACTIONS = [
   { label: '🐛 버그 접수', text: '버그를 신고하고 싶어요', disabled: false },
   { label: '✨ UX 개선 요청', text: 'UX 개선 요청을 하고 싶어요', disabled: false },
   { label: '➕ 기능 추가 요청', text: '기능 추가 요청을 하고 싶어요', disabled: false },
-  { label: '📖 사용법 안내', text: '', disabled: true },
+  { label: '📖 사용법 안내', text: 'MISO 사용법을 알고 싶어요', disabled: false, manual: true },
 ]
 
 const COMPANY_OPTIONS = ['GS리테일', 'GS E&R', 'GS칼텍스', '기타']
@@ -51,6 +51,8 @@ export default function Home() {
   const [envSelections, setEnvSelections] = useState<Record<string, string>>({})
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>([])
   const [activeIssue, setActiveIssue] = useState<string | null>(null)
+  const [chatMode, setChatMode] = useState<'submit' | 'manual'>('submit')
+  const [misoConvId, setMisoConvId] = useState<string>('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -72,6 +74,8 @@ export default function Home() {
     setMessages([INITIAL_MESSAGE])
     setEnvSelections({})
     setInput('')
+    setChatMode('submit')
+    setMisoConvId('')
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
@@ -90,9 +94,11 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          ...(chatMode === 'manual' && { mode: 'manual', misoConvId }),
         }),
       })
       const data = await res.json()
+      if (data.misoConvId) setMisoConvId(data.misoConvId)
       const newMsg: Message = {
         role: 'assistant',
         content: data.message || data.error || '오류가 발생했습니다.',
@@ -364,7 +370,11 @@ export default function Home() {
                 {QUICK_ACTIONS.map(action => (
                   <button
                     key={action.label}
-                    onClick={() => !action.disabled && sendMessage(action.text)}
+                    onClick={() => {
+                      if (action.disabled) return
+                      if ((action as any).manual) setChatMode('manual')
+                      sendMessage(action.text)
+                    }}
                     disabled={action.disabled}
                     style={{ ...chipStyle, cursor: action.disabled ? 'not-allowed' : 'pointer', opacity: action.disabled ? 0.4 : 1 }}
                   >

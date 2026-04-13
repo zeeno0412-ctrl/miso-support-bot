@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { SYSTEM_PROMPT } from '@/lib/system-prompt'
 import { createIssue, IssueData } from '@/lib/notion'
+import { callMisoManual } from '@/lib/miso-manual'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -9,7 +10,14 @@ const anthropic = new Anthropic({
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json()
+    const { messages, mode, misoConvId } = await req.json()
+
+    // MISO 사용법 매뉴얼 모드
+    if (mode === 'manual') {
+      const lastMsg = messages[messages.length - 1]?.content ?? ''
+      const result = await callMisoManual(lastMsg, misoConvId ?? '', 'miso-support-bot')
+      return NextResponse.json({ message: result.answer, misoConvId: result.conversationId, submitted: false })
+    }
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     const systemPrompt = SYSTEM_PROMPT + `\n\n오늘 날짜는 ${today}입니다. 접수번호 생성 시 반드시 이 날짜를 사용하세요. (예: MISO-${today}-042)`
