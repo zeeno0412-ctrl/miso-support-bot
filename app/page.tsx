@@ -79,7 +79,7 @@ export default function Home() {
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
-  const sendMessage = async (text?: string) => {
+  const sendMessage = async (text?: string, forceMode?: 'submit' | 'manual') => {
     const userText = text || input.trim()
     if (!userText || loading || activeIssue) return
 
@@ -88,13 +88,15 @@ export default function Home() {
     setInput('')
     setLoading(true)
 
+    const effectiveMode = forceMode ?? chatMode
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          ...(chatMode === 'manual' && { mode: 'manual', misoConvId }),
+          ...(effectiveMode === 'manual' && { mode: 'manual', misoConvId }),
         }),
       })
       const data = await res.json()
@@ -372,8 +374,9 @@ export default function Home() {
                     key={action.label}
                     onClick={() => {
                       if (action.disabled) return
-                      if ((action as any).manual) setChatMode('manual')
-                      sendMessage(action.text)
+                      const isManual = !!(action as any).manual
+                      if (isManual) setChatMode('manual')
+                      sendMessage(action.text, isManual ? 'manual' : 'submit')
                     }}
                     disabled={action.disabled}
                     style={{ ...chipStyle, cursor: action.disabled ? 'not-allowed' : 'pointer', opacity: action.disabled ? 0.4 : 1 }}
