@@ -29,7 +29,7 @@ const QUICK_ACTIONS = [
   { label: '📖 사용법 안내', text: 'MISO 사용법을 알고 싶어요', disabled: false, manual: true },
 ]
 
-const COMPANY_OPTIONS = ['GS리테일', 'GS E&R', 'GS칼텍스', '기타']
+const COMPANY_OPTIONS = ['GS리테일']
 const SCREEN_OPTIONS = ['미소 AI', '에이전트', '워크플로우', '지식관리', '도구 모음', '기타']
 
 const ENV_GROUPS = [

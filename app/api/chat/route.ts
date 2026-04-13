@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
             const issueData: IssueData = {
               접수번호: parsed.data.접수번호 || '',
               유형: parsed.data.유형,
-              계열사: parsed.data.계열사 || parsed.data.게열사 || '',
+              계열사: 'GS리테일',
               화면: parsed.data.화면 || '',
               제목: parsed.data.제목 || '',
               제보자: parsed.data.제보자 || '',
