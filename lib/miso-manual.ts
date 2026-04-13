@@ -16,6 +16,7 @@ export async function callMisoManual(
       conversation_id: conversationId,
       user,
     }),
+    signal: AbortSignal.timeout(25000),
   })
 
   if (!res.ok) {
