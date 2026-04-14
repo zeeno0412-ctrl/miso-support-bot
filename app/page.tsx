@@ -79,23 +79,48 @@ export default function Home() {
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
+  const PARSE_THRESHOLD = 100
+
   const sendMessage = async (text?: string, forceMode?: 'submit' | 'manual') => {
     const userText = text || input.trim()
     if (!userText || loading || activeIssue) return
 
-    const newMessages: Message[] = [...messages, { role: 'user', content: userText }]
-    setMessages(newMessages)
+    const effectiveMode = forceMode ?? chatMode
+    const isFirstUserMessage = messages.length === 1 // 아직 INITIAL_MESSAGE만 있는 상태
+
+    // 100자 이상 첫 메시지: 파싱 후 빈 필드만 시스템 메시지로 주입
+    let parsedContext = ''
+    if (isFirstUserMessage && effectiveMode === 'submit' && userText.length >= PARSE_THRESHOLD) {
+      try {
+        const parseRes = await fetch('/api/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: userText }),
+        })
+        const { parsed } = await parseRes.json()
+        const filled = Object.entries(parsed as Record<string, string>)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ')
+        if (filled) {
+          parsedContext = `\n\n[시스템: 사용자가 이미 제공한 정보 - ${filled}. 이 항목들은 다시 묻지 마세요.]`
+        }
+      } catch {}
+    }
+
+    // UI에는 원본 메시지만 표시, API에는 파싱 컨텍스트 포함
+    const uiMessages: Message[] = [...messages, { role: 'user', content: userText }]
+    const apiMessages: Message[] = [...messages, { role: 'user', content: userText + parsedContext }]
+    setMessages(uiMessages)
     setInput('')
     setLoading(true)
-
-    const effectiveMode = forceMode ?? chatMode
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          messages: apiMessages.map(m => ({ role: m.role, content: m.content })),
           ...(effectiveMode === 'manual' && { mode: 'manual', misoConvId }),
         }),
       })
@@ -107,7 +132,7 @@ export default function Home() {
         submitted: data.submitted,
         issueNumber: data.issueNumber,
       }
-      const finalMessages = [...newMessages, newMsg]
+      const finalMessages = [...uiMessages, newMsg]
       setMessages(finalMessages)
 
       if (data.submitted && data.issueNumber) {
